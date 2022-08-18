@@ -1,83 +1,43 @@
 package com.bank.msperson.controllers;
 
 import com.bank.msperson.handler.ResponseHandler;
-import com.bank.msperson.models.dao.PersonDao;
 import com.bank.msperson.models.documents.Person;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.bank.msperson.services.PersonService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import javax.validation.Valid;
-import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/person")
 public class PersonRestControllers {
 
     @Autowired
-    private PersonDao dao;
-
-    private static final Logger log = LoggerFactory.getLogger(PersonRestControllers.class);
+    private PersonService personService;
 
     @PostMapping
-    public Mono<ResponseEntity<Object>> Create(@Valid @RequestBody Person p) {
-        p.setCreatedDate(LocalDateTime.now());
-        return dao.save(p)
-                .doOnNext(person -> log.info(person.toString()))
-                .map(person -> ResponseHandler.response("Done", HttpStatus.OK, person))
-                .onErrorResume(error -> Mono.just(ResponseHandler.response(error.getMessage(), HttpStatus.BAD_REQUEST, null)));
+    public Mono<ResponseHandler> create(@Valid @RequestBody Person p) {
+        return personService.create(p);
     }
 
     @GetMapping
-    public Mono<ResponseEntity<Object>> FindAll() {
-
-        return dao.findAll().map(person -> {
-                    person.setFirstName(person.getFirstName().toUpperCase());
-                    person.setLastName(person.getLastName().toUpperCase());
-                    return person;
-                })
-                .doOnNext(person -> log.info(person.toString()))
-                .collectList().map(persons -> ResponseHandler.response("Done", HttpStatus.OK, persons))
-                .onErrorResume(error -> Mono.just(ResponseHandler.response(error.getMessage(), HttpStatus.BAD_REQUEST, null)));
-
+    public Mono<ResponseHandler> findAll() {
+        return personService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Mono<ResponseEntity<Object>> Find(@PathVariable String id) {
-        return dao.findById(id)
-                .doOnNext(person -> log.info(person.toString()))
-                .map(person -> ResponseHandler.response("Done", HttpStatus.OK, person))
-                .onErrorResume(error -> Mono.just(ResponseHandler.response(error.getMessage(), HttpStatus.BAD_REQUEST, null)));
+    public Mono<ResponseHandler> find(@PathVariable String id) {
+        return personService.find(id);
     }
 
     @PutMapping("/{id}")
-    public Mono<ResponseEntity<Object>> Update(@PathVariable("id") String id,@Valid @RequestBody Person p) {
-        return dao.existsById(id).flatMap(check -> {
-            if (check){
-                p.setUpdateDate(LocalDateTime.now());
-                return dao.save(p)
-                        .doOnNext(person -> log.info(person.toString()))
-                        .map(person -> ResponseHandler.response("Done", HttpStatus.OK, person))
-                        .onErrorResume(error -> Mono.just(ResponseHandler.response(error.getMessage(), HttpStatus.BAD_REQUEST, null)));
-            }
-            else
-                return Mono.just(ResponseHandler.response("Not found", HttpStatus.NOT_FOUND, null));
-
-        });
+    public Mono<ResponseHandler> update(@PathVariable("id") String id,@Valid @RequestBody Person p) {
+        return personService.update(id, p);
     }
 
     @DeleteMapping("/{id}")
-    public Mono<ResponseEntity<Object>> Delete(@PathVariable("id") String id) {
-
-        return dao.existsById(id).flatMap(check -> {
-            if (check)
-                return dao.deleteById(id).then(Mono.just(ResponseHandler.response("Done", HttpStatus.OK, null)));
-            else
-                return Mono.just(ResponseHandler.response("Not found", HttpStatus.NOT_FOUND, null));
-        });
+    public Mono<ResponseHandler> delete(@PathVariable("id") String id) {
+        return personService.delete(id);
     }
 }
